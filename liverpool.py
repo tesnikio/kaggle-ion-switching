@@ -26,10 +26,10 @@ from sklearn.model_selection import GroupKFold, GroupShuffleSplit, LeaveOneGroup
 from sklearn.preprocessing import MinMaxScaler
 from pytorch_toolbelt import losses as L
 
-ss = pd.read_csv("../input/liverpool-ion-switching/sample_submission.csv", dtype={'time':str})
-train = pd.read_csv('../input/data-without-drift/train_clean.csv')
+ss = pd.read_csv("sample_submission.csv", dtype={'time':str})
+train = pd.read_csv('train_clean.csv')
 train['filter'] = 0
-test = pd.read_csv('../input/data-without-drift/test_clean.csv')
+test = pd.read_csv('test_clean.csv')
 test['filter'] = 2
 ts1 = pd.concat([train, test], axis=0, sort=False).reset_index(drop=True)
 
@@ -160,8 +160,6 @@ class Seq2SeqRnn(nn.Module):
 
 
 class IonDataset(Dataset):
-    """Car dataset."""
-
     def __init__(self, data, labels, training=True, transform=None, flip=0.5, noise_level=0, class_split=0.0):
         self.data = data
         self.labels = labels
@@ -312,4 +310,4 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
 test_preds_all = test_preds_all/np.sum(test_preds_all, axis=1)[:, None]
 test_pred_frame = pd.DataFrame({'time': ss['time'].astype(str),
                                 'open_channels': np.argmax(test_preds_all, axis=1)})
-test_pred_frame.to_csv("./gru_preds.csv", index=False)
+test_pred_frame.to_csv("./submission_preds.csv", index=False)

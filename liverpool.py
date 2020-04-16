@@ -1,30 +1,30 @@
 import os
 os.system('pip install pytorch_toolbelt')
+
 import pandas as pd
 import numpy as np
 import json
-pd.options.display.max_rows = 1000
-pd.options.display.max_columns = 1000
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, f1_score
-import time
-
-from torch.utils.data import Dataset, DataLoader
+import gc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import seaborn as sns
+import matplotlib.pyplot as plt
+import time
+
+from sklearn.metrics import accuracy_score, f1_score
+from torch.utils.data import Dataset, DataLoader
 from functools import partial
 from sklearn.model_selection import KFold
-import gc
-
 from tqdm import tqdm
 from itertools import groupby, accumulate
 from random import shuffle
-
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit, LeaveOneGroupOut
 from sklearn.preprocessing import MinMaxScaler
 from pytorch_toolbelt import losses as L
+
+pd.options.display.max_rows = 1000
+pd.options.display.max_columns = 1000
 
 ss = pd.read_csv("sample_submission.csv", dtype={'time':str})
 train = pd.read_csv('train_clean.csv')
@@ -34,12 +34,12 @@ test['filter'] = 2
 ts1 = pd.concat([train, test], axis=0, sort=False).reset_index(drop=True)
 
 np.random.seed(321)
-ts1['group'] = pd.cut(ts1['time'], bins=np.linspace(0.0000, 700., num=14*125 + 1), labels=list(range(14*125)), include_lowest=True).astype(int)
+ts1['group'] = pd.cut(ts1['time'], bins=np.linspace(0.0000, 700., num=14 * 125 + 1), labels=list(range(14 * 125)), include_lowest=True).astype(int)
 np.random.seed(321)
 
-y = ts1.loc[ts1['filter']==0, 'open_channels']
-group = ts1.loc[ts1['filter']==0, 'group']
-X = ts1.loc[ts1['filter']==0, 'signal']
+X = ts1.loc[ts1['filter'] == 0, 'signal']
+y = ts1.loc[ts1['filter'] == 0, 'open_channels']
+group = ts1.loc[ts1['filter'] == 0, 'group']
 
 np.random.seed(321)
 skf = GroupKFold(n_splits=5)
@@ -52,11 +52,11 @@ for col in use_cols:
     col_mean = ts1[col].mean()
     ts1[col] = ts1[col].fillna(col_mean)
  
-val_preds_all = np.zeros((ts1[ts1['filter']==0].shape[0], 11))
-test_preds_all = np.zeros((ts1[ts1['filter']==2].shape[0], 11))
+val_preds_all = np.zeros((ts1[ts1['filter'] == 0].shape[0], 11))
+test_preds_all = np.zeros((ts1[ts1['filter'] == 2].shape[0], 11))
 
-groups = ts1.loc[ts1['filter']==0, 'group']
-times = ts1.loc[ts1['filter']==0, 'time']
+groups = ts1.loc[ts1['filter'] == 0, 'group']
+times = ts1.loc[ts1['filter'] == 0, 'time']
 
 new_splits = []
 for sp in splits:
@@ -65,11 +65,12 @@ for sp in splits:
     new_split.append(np.unique(groups[sp[1]]))
     new_splits.append(new_split)
     
-trainval = np.array(list(ts1[ts1['filter']==0].groupby('group').apply(lambda x: x[use_cols].values)))
-test = np.array(list(ts1[ts1['filter']==2].groupby('group').apply(lambda x: x[use_cols].values)))
-trainval_y = np.array(list(ts1[ts1['filter']==0].groupby('group').apply(lambda x: x[['open_channels']].values)))
+trainval = np.array(list(ts1[ts1['filter'] == 0].groupby('group').apply(lambda x: x[use_cols].values)))
+test = np.array(list(ts1[ts1['filter'] == 2].groupby('group').apply(lambda x: x[use_cols].values)))
+trainval_y = np.array(list(ts1[ts1['filter'] == 0].groupby('group').apply(lambda x: x[['open_channels']].values)))
 
 gc.collect()
+
 # transpose to B x C x L
 trainval = trainval.transpose((0,2,1))
 test = test.transpose((0,2,1))
@@ -103,9 +104,7 @@ class EarlyStopping:
 
     
 class Seq2SeqRnn(nn.Module):
-    def __init__(self, input_size, seq_len, hidden_size, output_size, num_layers=1, bidirectional=False, dropout=.3,
-            hidden_layers = [100, 200]):
-        
+    def __init__(self, input_size, seq_len, hidden_size, output_size, num_layers=1, bidirectional=False, dropout=.3, hidden_layers = [100, 200]):
         super().__init__()
         self.input_size = input_size
         self.seq_len = seq_len
@@ -114,27 +113,32 @@ class Seq2SeqRnn(nn.Module):
         self.bidirectional=bidirectional
         self.output_size=output_size
         
-        self.rnn = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, 
-                           bidirectional=bidirectional, batch_first=True,dropout=0.3)
+        self.rnn = nn.GRU(input_size=input_size, 
+                          hidden_size=hidden_size, 
+                          num_layers=num_layers, 
+                          bidirectional=bidirectional, 
+                          batch_first=True, 
+                          dropout=0.3)
          # Input Layer
         if hidden_layers and len(hidden_layers):
-            first_layer  = nn.Linear(hidden_size*2 if bidirectional else hidden_size, hidden_layers[0])
+            first_layer  = nn.Linear(2 * hidden_size if bidirectional else hidden_size, hidden_layers[0])
 
             # Hidden Layers
             self.hidden_layers = nn.ModuleList(
-                [first_layer]+[nn.Linear(hidden_layers[i], hidden_layers[i+1]) for i in range(len(hidden_layers) - 1)]
+                [first_layer]+[nn.Linear(hidden_layers[i], hidden_layers[i + 1]) for i in range(len(hidden_layers) - 1)]
             )
-            for layer in self.hidden_layers: nn.init.kaiming_normal_(layer.weight.data)   
+
+            for layer in self.hidden_layers: 
+                nn.init.kaiming_normal_(layer.weight.data)   
 
             self.intermediate_layer = nn.Linear(hidden_layers[-1], self.input_size)
             # output layers
             self.output_layer = nn.Linear(hidden_layers[-1], output_size)
             nn.init.kaiming_normal_(self.output_layer.weight.data) 
-           
         else:
             self.hidden_layers = []
-            self.intermediate_layer = nn.Linear(hidden_size*2 if bidirectional else hidden_siz, self.input_size)
-            self.output_layer = nn.Linear(hidden_size*2 if bidirectional else hidden_size, output_size)
+            self.intermediate_layer = nn.Linear(2 * hidden_size if bidirectional else hidden_siz, self.input_size)
+            self.output_layer = nn.Linear(2 * hidden_size if bidirectional else hidden_size, output_size)
             nn.init.kaiming_normal_(self.output_layer.weight.data) 
 
         self.activation_fn = torch.relu
@@ -142,7 +146,7 @@ class Seq2SeqRnn(nn.Module):
         
     def forward(self, x):
         batch_size = x.size(0)
-        x = x.permute(0,2,1)
+        x = x.permute(0, 2, 1) #put input shape into the correct order
 
         outputs, hidden = self.rnn(x)        
 
@@ -178,7 +182,7 @@ class IonDataset(Dataset):
         if np.random.rand() < self.class_split:
             data, labels = class_split(data, labels)
         if  np.random.rand() < self.noise_level:
-            data = data * torch.FloatTensor(10000).uniform_(1-self.noise_level, 1+self.noise_level)
+            data = data * torch.FloatTensor(10000).uniform_(1 - self.noise_level, 1 + self.noise_level)
         if np.random.rand() < self.flip:
             data = torch.flip(data, dims=[1])
             labels = np.flip(labels, axis=0).copy().astype(int)
@@ -186,7 +190,8 @@ class IonDataset(Dataset):
         return [data, labels.astype(int)]
 
 if not os.path.exists("./models"):
-            os.makedirs("./models")
+    os.makedirs("./models")
+
 for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
     print("Fold : {}".format(index))
     
@@ -201,25 +206,35 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
     test_dataloader = DataLoader(test_dataset, batchsize, shuffle=False, num_workers=8, pin_memory=True)
     test_preds_iter = np.zeros((2000000, 11))
     it = 0
+    
     for it in range(1):
         device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-        model=Seq2SeqRnn(input_size=trainval.shape[1], seq_len=4000, hidden_size=64, output_size=11, num_layers=2, hidden_layers=[64,64,64],
-                         bidirectional=True).to(device)
+        model = Seq2SeqRnn(input_size=trainval.shape[1], 
+                           seq_len=4000, 
+                           hidden_size=64, 
+                           output_size=11, 
+                           num_layers=2, 
+                           hidden_layers=[64, 64, 64],
+                           bidirectional=True).to(device)
     
-        no_of_epochs = 150
+        number_of_epochs = 150
         early_stopping = EarlyStopping(patience=20, is_maximize=True, checkpoint_path="./models/gru_clean_checkpoint_fold_{}_iter_{}.pt".format(index, it))
         criterion = L.FocalLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-        schedular = torch.optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.1, div_factor=1e3, max_lr=0.001, epochs=no_of_epochs,
-                                                steps_per_epoch=len(train_dataloader))
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer=optimizer, 
+                                                        pct_start=0.1, 
+                                                        div_factor=1e3, 
+                                                        max_lr=1e-3, 
+                                                        epochs=number_of_epochs,
+                                                        steps_per_epoch=len(train_dataloader))
         avg_train_losses, avg_valid_losses = [], [] 
     
-    
-        for epoch in range(no_of_epochs):
+        for epoch in range(number_of_epochs):
             start_time = time.time()
     
             print("Epoch : {}".format(epoch))
-            print( "learning_rate: {:0.9f}".format(schedular.get_lr()[0]))
+            print( "learning_rate: {:0.9f}".format(scheduler.get_lr()[0]))
+            
             train_losses, valid_losses = [], []
     
             model.train() # prep model for training
@@ -240,7 +255,7 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
                 loss.backward()
                 # perform a single optimization step (parameter update)
                 optimizer.step()
-                schedular.step()
+                scheduler.step()
                 # record training loss
                 train_losses.append(loss.item())
     
@@ -273,9 +288,9 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
             print("train_loss: {:0.6f}, valid_loss: {:0.6f}".format(train_loss, valid_loss))
 
             train_score = f1_score(train_true.cpu().detach().numpy(), train_preds.cpu().detach().numpy().argmax(1), labels=list(range(11)), average='macro')
-    
             val_score = f1_score(val_true.cpu().detach().numpy(), val_preds.cpu().detach().numpy().argmax(1), labels=list(range(11)), average='macro')
-            print( "train_f1: {:0.6f}, valid_f1: {:0.6f}".format(train_score, val_score))
+            
+            print("train_f1: {:0.6f}, valid_f1: {:0.6f}".format(train_score, val_score))
     
             if early_stopping(val_score, model):
                 print("Early Stopping...")
@@ -299,12 +314,13 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
        
         test_preds_iter += test_preds
         test_preds_all += test_preds
+        
         if not os.path.exists("./predictions/test"):
             os.makedirs("./predictions/test")
+        
         np.save('./predictions/test/gru_clean_fold_{}_iter_{}_raw.npy'.format(index, it), arr=test_preds_iter)
         np.save('./predictions/test/gru_clean_fold_{}_raw.npy'.format(index), arr=test_preds_all)
 
-test_preds_all = test_preds_all/np.sum(test_preds_all, axis=1)[:, None]
-test_pred_frame = pd.DataFrame({'time': ss['time'].astype(str),
-                                'open_channels': np.argmax(test_preds_all, axis=1)})
+test_preds_all = test_preds_all / np.sum(test_preds_all, axis=1)[:, None]
+test_pred_frame = pd.DataFrame({'time': ss['time'].astype(str), 'open_channels': np.argmax(test_preds_all, axis=1)})
 test_pred_frame.to_csv("./submission_preds.csv", index=False)

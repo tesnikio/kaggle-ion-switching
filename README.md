@@ -1,4 +1,4 @@
-# kaggle-ion-switching
+# [Kaggle Ion Switching](https://www.kaggle.com/c/liverpool-ion-switching)
 
 Seq2Seq RNN with GRU.
 

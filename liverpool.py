@@ -33,9 +33,6 @@ test = pd.read_csv('test_clean.csv')
 test['filter'] = 2
 ts1 = pd.concat([train, test], axis=0, sort=False).reset_index(drop=True)
 
-ts1['time2'] = pd.cut(ts1['time'], bins=np.linspace(0.0000, 700., num=14 + 1), labels=list(range(14)), include_lowest=True).astype(int)
-ts1['time2'] = ts1.groupby('time2')['time'].rank( )/500000.
-
 np.random.seed(321)
 ts1['group'] = pd.cut(ts1['time'], bins=np.linspace(0.0000, 700., num=14*125 + 1), labels=list(range(14*125)), include_lowest=True).astype(int)
 np.random.seed(321)
@@ -244,7 +241,7 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
                 # perform a single optimization step (parameter update)
                 optimizer.step()
                 schedular.step()
-                # record training lossa
+                # record training loss
                 train_losses.append(loss.item())
     
                 train_true = torch.cat([train_true, y_], 0)
@@ -273,7 +270,7 @@ for index, (train_index, val_index ) in enumerate(new_splits[0:], start=0):
             avg_train_losses.append(train_loss)
             avg_valid_losses.append(valid_loss)
             
-            print( "train_loss: {:0.6f}, valid_loss: {:0.6f}".format(train_loss, valid_loss))
+            print("train_loss: {:0.6f}, valid_loss: {:0.6f}".format(train_loss, valid_loss))
 
             train_score = f1_score(train_true.cpu().detach().numpy(), train_preds.cpu().detach().numpy().argmax(1), labels=list(range(11)), average='macro')
     

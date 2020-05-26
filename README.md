@@ -5,5 +5,15 @@
 ![Place](https://img.shields.io/badge/place-9-blue.svg)
 ![Gold medal](https://img.shields.io/badge/medal-gold-ffd700.svg)
 
+## Overview
+#### Data
+- 11 channels
+
+#### Model design
+- WaveNet on Drift Removed Data
+
+#### Evaluation
+- macro F1 score
+
 ## License
 [MIT](LICENSE)

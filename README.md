@@ -1,13 +1,13 @@
-# [Kaggle Ion Switching](https://www.kaggle.com/c/liverpool-ion-switching)
+# [Kaggle Jigsaw Rate Severity of Toxic Comments](https://www.kaggle.com/c/jigsaw-toxic-severity-rating)
 
-![Public LB](https://img.shields.io/badge/public%20LB-0.94656-green.svg)
-![Private LB](https://img.shields.io/badge/private%20LB-0.94526-green.svg)
-![Place](https://img.shields.io/badge/place-9-blue.svg)
-![Gold medal](https://img.shields.io/badge/medal-gold-ffd700.svg)
+![Public LB](https://img.shields.io/badge/public%20LB-0.83781-green.svg)
+![Private LB](https://img.shields.io/badge/private%20LB-0.79690-green.svg)
+![Place](https://img.shields.io/badge/place-185-blue.svg)
+![Bronze medal](https://img.shields.io/badge/medal-bronze-ffd700.svg)
 
 ## Overview
 #### Model design
-- WaveNet on Drift Removed Data
+- RoBerta & Naive Bayes ensemble
 
 ## License
 [MIT](LICENSE)

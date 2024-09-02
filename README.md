@@ -6,7 +6,7 @@
 ![Bronze medal](https://img.shields.io/badge/medal-gold-FFD700.svg)
 
 ## Overview
-#### Model design
+#### Solution
 - WaveNet on drifted data
 
 ## License
